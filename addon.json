@@ -7,7 +7,7 @@
     "contact": "https://glutanimate.com",
     "homepage": "https://github.com/glutanimate/speed-focus-mode",
     "copyright_start": 2017,
-    "tags": "",
+    "tags": "productivity gamification speed focus",
     "conflicts": [],
     "targets": [
         "anki20",
