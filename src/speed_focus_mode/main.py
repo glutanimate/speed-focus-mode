@@ -73,6 +73,8 @@ def append_html(self, _old):
         <script>
             var autoAnswerTimeout = 0;
             var autoAgainTimeout = 0;
+            var autoGoodTimeout = 0;
+            var autoEasyTimeout = 0;
             var autoAlertTimeout = 0;
 
             var setAutoAnswer = function(ms) {
@@ -83,12 +85,20 @@ def append_html(self, _old):
                 clearTimeout(autoAgainTimeout);
                 autoAgainTimeout = setTimeout(function () { %s("ease1"); }, ms);
             }
+            var setAutoGood = function(ms) {
+                clearTimeout(autoGoodTimeout);
+                autoGoodTimeout = setTimeout(function () { %s("ease2"); }, ms);
+            }
+            var setAutoEasy = function(ms) {
+                clearTimeout(autoEasyTimeout);
+                autoEasyTimeout = setTimeout(function () { %s("ease3"); }, ms);
+            }
             var setAutoAlert = function(ms) {
                 clearTimeout(autoAlertTimeout);
                 autoAlertTimeout = setTimeout(function () { %s("autoalert"); }, ms);
             }
         </script>
-        """ % (pycmd, pycmd, pycmd)
+        """ % (pycmd, pycmd, pycmd, pycmd, pycmd)
 
 
 # set timeouts for auto-alert and auto-reveal
@@ -105,6 +115,17 @@ def set_again_timeout(self):
     if c.get('autoAgain', 0) > 0:
         self.bottom.web.eval("setAutoAgain(%d);" % (c['autoAgain'] * 1000))
 
+# set timeout for auto-good
+def set_good_timeout(self):
+    c = self.mw.col.decks.confForDid(self.card.odid or self.card.did)
+    if c.get('autoGood', 0) > 0:
+        self.bottom.web.eval("setAutoGood(%d);" % (c['autoGood'] * 1000))
+		
+# set timeout for auto-easy
+def set_easy_timeout(self):
+    c = self.mw.col.decks.confForDid(self.card.odid or self.card.did)
+    if c.get('autoEasy', 0) > 0:
+        self.bottom.web.eval("setAutoEasy(%d);" % (c['autoEasy'] * 1000))
 
 
 # clear timeouts for auto-alert and auto-reveal, run on answer reveal
@@ -125,10 +146,26 @@ def clear_again_timeout():
             clearTimeout(autoAgainTimeout);
         }
     """)
+	
+# clear timeout for auto-good, run on next card
+def clear_good_timeout():
+    mw.reviewer.bottom.web.eval("""
+        if (typeof autoGoodTimeout !== 'undefined') {
+            clearTimeout(autoGoodTimeout);
+        }
+    """)
+	
+# clear timeout for auto-easy, run on next card
+def clear_easy_timeout():
+    mw.reviewer.bottom.web.eval("""
+        if (typeof autoEasyTimeout !== 'undefined') {
+            clearTimeout(autoEasyTimeout);
+        }
+    """)
 
 
 def setup_ui(self, Dialog):
-    self.maxTaken.setMinimum(3)
+    self.maxTaken.setMinimum(5)
 
     grid = QGridLayout()
     label1 = QLabel(self.tab_5)
@@ -169,6 +206,31 @@ def setup_ui(self, Dialog):
     grid.addWidget(label2, 0, 2, 1, 1)
     self.verticalLayout_6.insertLayout(3, grid)
 
+    grid = QGridLayout()
+    label1 = QLabel(self.tab_5)
+    label1.setText(_("Automatically rate 'good' after"))
+    label2 = QLabel(self.tab_5)
+    label2.setText(_("seconds"))
+    self.autoGood = QSpinBox(self.tab_5)
+    self.autoGood.setMinimum(0)
+    self.autoGood.setMaximum(3600)
+    grid.addWidget(label1, 0, 0, 1, 1)
+    grid.addWidget(self.autoGood, 0, 1, 1, 1)
+    grid.addWidget(label2, 0, 2, 1, 1)
+    self.verticalLayout_6.insertLayout(4, grid)
+	
+    grid = QGridLayout()
+    label1 = QLabel(self.tab_5)
+    label1.setText(_("Automatically rate 'easy' after"))
+    label2 = QLabel(self.tab_5)
+    label2.setText(_("seconds"))
+    self.autoEasy = QSpinBox(self.tab_5)
+    self.autoEasy.setMinimum(0)
+    self.autoEasy.setMaximum(3600)
+    grid.addWidget(label1, 0, 0, 1, 1)
+    grid.addWidget(self.autoEasy, 0, 1, 1, 1)
+    grid.addWidget(label2, 0, 2, 1, 1)
+    self.verticalLayout_6.insertLayout(4, grid)
 
 def load_conf(self):
     f = self.form
@@ -176,7 +238,8 @@ def load_conf(self):
     f.autoAlert.setValue(c.get('autoAlert', 0))
     f.autoAnswer.setValue(c.get('autoAnswer', 0))
     f.autoAgain.setValue(c.get('autoAgain', 0))
-
+    f.autoGood.setValue(c.get('autoGood', 0))
+    f.autoEasy.setValue(c.get('autoEasy', 0))
 
 def save_conf(self):
     f = self.form
@@ -184,6 +247,8 @@ def save_conf(self):
     c['autoAlert'] = f.autoAlert.value()
     c['autoAnswer'] = f.autoAnswer.value()
     c['autoAgain'] = f.autoAgain.value()
+    c['autoGood'] = f.autoGood.value()
+    c['autoEasy'] = f.autoEasy.value()
 
 
 # Sound playback
@@ -208,9 +273,13 @@ Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, append_html, 'around')
 Reviewer._showAnswerButton = wrap(
     Reviewer._showAnswerButton, set_answer_timeout)
 Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons, set_again_timeout)
+Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons, set_good_timeout)
+Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons, set_easy_timeout)
 Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
 addHook("showAnswer", clear_answer_timeout)
 addHook("showQuestion", clear_again_timeout)
+addHook("showQuestion", clear_good_timeout)
+addHook("showQuestion", clear_easy_timeout)
 
 dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setup_ui)
 DeckConf.loadConf = wrap(DeckConf.loadConf, load_conf)
