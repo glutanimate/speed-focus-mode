@@ -48,93 +48,42 @@ from aqt.utils import tooltip
 
 from anki.hooks import addHook, wrap
 from anki.sound import play
-from anki.lang import _
 
 # Anki 2.1 support
 from anki import version as anki_version
 ANKI20 = anki_version.startswith("2.0.")
-pycmd = "py.link" if ANKI20 else "pycmd"
+PYCMD = "py.link" if ANKI20 else "pycmd"
 
+# CONSTANTS
+###############################################################################
 
 # determine sound file path
-sys_encoding = sys.getfilesystemencoding()
+SYS_ENCODING = sys.getfilesystemencoding()
 
 if not ANKI20:
-    addon_path = os.path.dirname(__file__)
+    ADDON_PATH = os.path.dirname(__file__)
 else:
-    addon_path = os.path.dirname(__file__).decode(sys_encoding)
+    ADDON_PATH = os.path.dirname(__file__).decode(SYS_ENCODING)
 
-alert_path = os.path.join(addon_path, "sounds", "alert.mp3")
+ALERT_PATH = os.path.join(ADDON_PATH, "sounds", "alert.mp3")
 
+# OPTIONS
+###############################################################################
 
-
-def append_html(self, _old):
-    return _old(self) + """
-        <script>
-            var autoAnswerTimeout = 0;
-            var autoAgainTimeout = 0;
-            var autoAlertTimeout = 0;
-
-            var setAutoAnswer = function(ms) {
-                clearTimeout(autoAnswerTimeout);
-                autoAnswerTimeout = setTimeout(function () { %s('ans') }, ms);
-            }
-            var setAutoAgain = function(ms) {
-                clearTimeout(autoAgainTimeout);
-                autoAgainTimeout = setTimeout(function () { %s("ease1"); }, ms);
-            }
-            var setAutoAlert = function(ms) {
-                clearTimeout(autoAlertTimeout);
-                autoAlertTimeout = setTimeout(function () { %s("autoalert"); }, ms);
-            }
-        </script>
-        """ % (pycmd, pycmd, pycmd)
-
-
-# set timeouts for auto-alert and auto-reveal
-def set_answer_timeout(self):
-    c = self.mw.col.decks.confForDid(self.card.odid or self.card.did)
-    if c.get('autoAnswer', 0) > 0:
-        self.bottom.web.eval("setAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
-    if c.get('autoAlert', 0) > 0:
-        self.bottom.web.eval("setAutoAlert(%d);" % (c['autoAlert'] * 1000))
-
-# set timeout for auto-again
-def set_again_timeout(self):
-    c = self.mw.col.decks.confForDid(self.card.odid or self.card.did)
-    if c.get('autoAgain', 0) > 0:
-        self.bottom.web.eval("setAutoAgain(%d);" % (c['autoAgain'] * 1000))
-
-
-
-# clear timeouts for auto-alert and auto-reveal, run on answer reveal
-def clear_answer_timeout():
-    mw.reviewer.bottom.web.eval("""
-        if (typeof autoAnswerTimeout !== 'undefined') {
-            clearTimeout(autoAnswerTimeout);
-        }
-        if (typeof autoAlertTimeout !== 'undefined') {
-            clearTimeout(autoAlertTimeout);
-        }
-    """)
-
-# clear timeout for auto-again, run on next card
-def clear_again_timeout():
-    mw.reviewer.bottom.web.eval("""
-        if (typeof autoAgainTimeout !== 'undefined') {
-            clearTimeout(autoAgainTimeout);
-        }
-    """)
-
+action_spin_items = (
+    ("Rate Again", "again"),
+    ("Rate Good", "good"),
+    ("Bury Card", "bury")
+)
 
 def setup_ui(self, Dialog):
     self.maxTaken.setMinimum(3)
 
     grid = QGridLayout()
     label1 = QLabel(self.tab_5)
-    label1.setText(_("Automatically play alert after"))
+    label1.setText("Automatically play alert after")
     label2 = QLabel(self.tab_5)
-    label2.setText(_("seconds"))
+    label2.setText("seconds")
     self.autoAlert = QSpinBox(self.tab_5)
     self.autoAlert.setMinimum(0)
     self.autoAlert.setMaximum(3600)
@@ -145,9 +94,9 @@ def setup_ui(self, Dialog):
 
     grid = QGridLayout()
     label1 = QLabel(self.tab_5)
-    label1.setText(_("Automatically show answer after"))
+    label1.setText("Automatically show answer after")
     label2 = QLabel(self.tab_5)
-    label2.setText(_("seconds"))
+    label2.setText("seconds")
     self.autoAnswer = QSpinBox(self.tab_5)
     self.autoAnswer.setMinimum(0)
     self.autoAnswer.setMaximum(3600)
@@ -158,24 +107,42 @@ def setup_ui(self, Dialog):
 
     grid = QGridLayout()
     label1 = QLabel(self.tab_5)
-    label1.setText(_("Automatically rate 'again' after"))
+    label1.setText("Automatically")
     label2 = QLabel(self.tab_5)
-    label2.setText(_("seconds"))
-    self.autoAgain = QSpinBox(self.tab_5)
-    self.autoAgain.setMinimum(0)
-    self.autoAgain.setMaximum(3600)
+    label2.setText("after")
+    label3 = QLabel(self.tab_5)
+    label3.setText("seconds")
+    self.autoAction = QComboBox(self.tab_5)
+    for label, action in action_spin_items:
+        self.autoAction.addItem(label, action)
+    self.autoActionTimer = QSpinBox(self.tab_5)
+    self.autoActionTimer.setMinimum(0)
+    self.autoActionTimer.setMaximum(3600)
+    self.autoActionSkipAnswer = QCheckBox(self.tab_5)
+    self.autoActionSkipAnswer.setText("Skip answer")
+    self.autoActionSkipAnswer.setToolTip("Start counting on question side")
     grid.addWidget(label1, 0, 0, 1, 1)
-    grid.addWidget(self.autoAgain, 0, 1, 1, 1)
+    grid.addWidget(self.autoAction, 0, 1, 1, 1)
     grid.addWidget(label2, 0, 2, 1, 1)
+    grid.addWidget(self.autoActionTimer, 0, 3, 1, 2)
+    grid.addWidget(label3, 0, 5, 1, 1)
+    grid.addWidget(self.autoActionSkipAnswer, 0, 6, 1, 1)
+    spacer = QSpacerItem(40, 10, QSizePolicy.Expanding)
+    grid.addItem(spacer, 0, 7, 1, 1)
     self.verticalLayout_6.insertLayout(3, grid)
-
 
 def load_conf(self):
     f = self.form
     c = self.conf
     f.autoAlert.setValue(c.get('autoAlert', 0))
     f.autoAnswer.setValue(c.get('autoAnswer', 0))
-    f.autoAgain.setValue(c.get('autoAgain', 0))
+    # keep "autoAgain" as name for legacy reasons
+    f.autoActionTimer.setValue(c.get('autoAgain', 0))
+    cur_action = c.get('autoAction', "again")
+    for index, item in enumerate(action_spin_items):
+        if item[1] == cur_action:
+            f.autoAction.setCurrentIndex(index)
+    f.autoActionSkipAnswer.setChecked(c.get('autoSkip', False))
 
 
 def save_conf(self):
@@ -183,35 +150,131 @@ def save_conf(self):
     c = self.conf
     c['autoAlert'] = f.autoAlert.value()
     c['autoAnswer'] = f.autoAnswer.value()
-    c['autoAgain'] = f.autoAgain.value()
+    c['autoAgain'] = f.autoActionTimer.value()
+    c['autoAction'] = f.autoAction.currentData()
+    c['autoSkip'] = f.autoActionSkipAnswer.isChecked()
 
-
-# Sound playback
-
-def linkHandler(self, url, _old):
-    if not url.startswith("autoalert"):
-        return _old(self, url)
-    if not self.mw.col:
-        # collection unloaded, e.g. when called during pre-exit sync
-        return
-    play(alert_path)
-    c = self.mw.col.decks.confForDid(self.card.odid or self.card.did)
-    timeout = c.get('autoAlert', 0)
-    tooltip("Wake up! You have been looking at <br>"
-            "the question for <b>{}</b> seconds!".format(timeout),
-            period=1000)
-
-
-# Hooks
-
-Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, append_html, 'around')
-Reviewer._showAnswerButton = wrap(
-    Reviewer._showAnswerButton, set_answer_timeout)
-Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons, set_again_timeout)
-Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
-addHook("showAnswer", clear_answer_timeout)
-addHook("showQuestion", clear_again_timeout)
 
 dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setup_ui)
 DeckConf.loadConf = wrap(DeckConf.loadConf, load_conf)
 DeckConf.saveConf = wrap(DeckConf.saveConf, save_conf, 'before')
+
+# REVIEWER - html and timeouts
+###############################################################################
+
+def append_html(self, _old):
+    return _old(self) + """
+        <script>
+            var autoAlertTimeout = 0;
+            var autoAnswerTimeout = 0;
+            var autoActionTimeout = 0;
+
+            var setAutoAlert = function(ms) {
+                clearTimeout(autoAlertTimeout);
+                autoAlertTimeout = setTimeout(function () { %s("spdf:alert"); }, ms);
+            }
+            var setAutoAnswer = function(ms) {
+                clearTimeout(autoAnswerTimeout);
+                autoAnswerTimeout = setTimeout(function () { %s('ans') }, ms);
+            }
+            var setAutoAction = function(ms) {
+                clearTimeout(autoActionTimeout);
+                autoActionTimeout = setTimeout(function () { %s("spdf:action"); }, ms);
+            }
+        </script>
+        """ % (PYCMD, PYCMD, PYCMD)
+
+
+# set timeouts for auto-alert and auto-reveal
+def set_answer_timeouts(self):
+    c = mw.col.decks.confForDid(self.card.odid or self.card.did)
+    if c.get('autoAnswer', 0) > 0:
+        self.bottom.web.eval("setAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
+    if c.get('autoAlert', 0) > 0:
+        self.bottom.web.eval("setAutoAlert(%d);" % (c['autoAlert'] * 1000))
+    if c.get("autoSkip") and c.get('autoAgain', 0) > 0:
+        self.bottom.web.eval("setAutoAction(%d);" % (c['autoAgain'] * 1000))
+
+# set timeout for auto-action
+def set_question_timeouts(self):
+    c = mw.col.decks.confForDid(self.card.odid or self.card.did)
+    if not c.get("autoSkip") and c.get('autoAgain', 0) > 0:
+        # keep "autoAgain" as name for legacy reasons
+        self.bottom.web.eval("setAutoAction(%d);" % (c['autoAgain'] * 1000))
+
+
+# clear timeouts for auto-alert and auto-reveal, run on answer reveal
+def clear_answer_timeouts():
+    reviewer = mw.reviewer
+    c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
+    reviewer.bottom.web.eval("""
+        if (typeof autoAnswerTimeout !== 'undefined') {
+            clearTimeout(autoAnswerTimeout);
+        }
+        if (typeof autoAlertTimeout !== 'undefined') {
+            clearTimeout(autoAlertTimeout);
+        }
+    """)
+    if c.get("autoSkip"):
+        reviewer.bottom.web.eval("""
+            if (typeof autoActionTimeout !== 'undefined') {
+                clearTimeout(autoActionTimeout);
+            }
+        """)
+
+# clear timeout for auto-action, run on next card
+def clear_question_timeouts():
+    reviewer = mw.reviewer
+    c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
+    if not c.get("autoSkip"):
+        mw.reviewer.bottom.web.eval("""
+            if (typeof autoActionTimeout !== 'undefined') {
+                clearTimeout(autoActionTimeout);
+            }
+        """)
+
+
+Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, append_html, 'around')
+Reviewer._showAnswerButton = wrap(
+    Reviewer._showAnswerButton, set_answer_timeouts)
+Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons,
+                                 set_question_timeouts)
+addHook("showAnswer", clear_answer_timeouts)
+addHook("showQuestion", clear_question_timeouts)
+
+
+# REVIEWER - action handler
+###############################################################################
+
+
+def linkHandler(self, url, _old):
+    if not url.startswith("spdf"):
+        return _old(self, url)
+    if not mw.col:
+        # collection unloaded, e.g. when called during pre-exit sync
+        return
+    cmd, action = url.split(":")
+    conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
+    
+    if action == "alert":
+        play(ALERT_PATH)
+        timeout = conf.get('autoAlert', 0)
+        tooltip("Wake up! You have been looking at <br>"
+                "the question for <b>{}</b> seconds!".format(timeout),
+                period=1000)
+    elif action == "action":
+        action = conf.get('autoAction', "again")
+    
+    if action == "again":
+        if self.state == "question":
+            self._showAnswer()
+        self._answerCard(1)
+    elif action == "good":
+        if self.state == "question":
+            self._showAnswer()
+        self._answerCard(self._defaultEase())
+    elif action == "bury":
+        mw.reviewer.onBuryCard()
+
+
+Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
