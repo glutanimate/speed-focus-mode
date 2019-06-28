@@ -46,6 +46,7 @@ from aqt.utils import tooltip
 from anki.hooks import addHook, wrap
 from anki.sound import play
 
+from .config import local_conf
 from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE
 
 # Support for custom alert sounds located in user_files dir
@@ -168,7 +169,7 @@ def setAnswerTimeouts(self):
                              (c['autoAgain'] * 1000, action))
         active = True
     
-    if active:
+    if active and local_conf["showMoreTimeButton"]:
         self.bottom.web.eval("spdfShow();")
     else:
         self.bottom.web.eval("spdfHide();")
@@ -183,7 +184,8 @@ def setQuestionTimeouts(self):
         action = c.get('autoAction', "again").capitalize()
         self.bottom.web.eval("spdfSetAutoAction(%d, '%s');" %
                              (c['autoAgain'] * 1000, action))
-        self.bottom.web.eval("spdfShow();")
+        if local_conf["showMoreTimeButton"]:
+            self.bottom.web.eval("spdfShow();")
     else:
         self.bottom.web.eval("spdfHide();")
 
