@@ -36,7 +36,6 @@ Initializes add-on components.
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-import sys
 import os
 
 from aqt.qt import *
@@ -49,23 +48,18 @@ from aqt.utils import tooltip
 from anki.hooks import addHook, wrap
 from anki.sound import play
 
-# Anki 2.1 support
-from anki import version as anki_version
-ANKI20 = anki_version.startswith("2.0.")
-PYCMD = "py.link" if ANKI20 else "pycmd"
+from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE
 
-# CONSTANTS
-###############################################################################
+# Support for custom alert sounds located in user_files dir
 
-# determine sound file path
-SYS_ENCODING = sys.getfilesystemencoding()
+alert_name = "alert.mp3"
+default_alert = os.path.join(PATH_ADDON, "sounds", alert_name)
+user_alert = os.path.join(PATH_USERFILES, alert_name)
 
-if not ANKI20:
-    ADDON_PATH = os.path.dirname(__file__)
+if os.path.exists(user_alert):
+    ALERT_PATH = user_alert
 else:
-    ADDON_PATH = os.path.dirname(__file__).decode(SYS_ENCODING)
-
-ALERT_PATH = os.path.join(ADDON_PATH, "sounds", "alert.mp3")
+    ALERT_PATH = default_alert
 
 # OPTIONS
 ###############################################################################
@@ -182,7 +176,7 @@ def append_html(self, _old):
                 autoActionTimeout = setTimeout(function () { %s("spdf:action"); }, ms);
             }
         </script>
-        """ % (PYCMD, PYCMD, PYCMD)
+        """ % (JSPY_BRIDGE, JSPY_BRIDGE, JSPY_BRIDGE)
 
 
 # set timeouts for auto-alert and auto-reveal
