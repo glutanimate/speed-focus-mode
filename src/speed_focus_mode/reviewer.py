@@ -71,10 +71,10 @@ else:
 button_html = """
 <td id="spdfControls" width="50" align="center" valign="top" class="stat">
 <span id="spdfTime" class="stattxt"></span><br>
-<button title="Shortcut key: P"
+<button title="Shortcut key: %s"
     onclick="spdfClearCurrentTimeout();">More time!</button>
 </td>
-"""
+""" % local_conf["hotkeyMoreTime"]
 
 script = """
 var spdfAutoAlertTimeout = 0;
