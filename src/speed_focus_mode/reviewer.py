@@ -39,6 +39,8 @@ from __future__ import (absolute_import, division,
 
 import os
 
+import aqt
+
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.utils import tooltip
@@ -115,6 +117,9 @@ function spdfSetCurrentTimer(timeout, action, ms) {
 function spdfClearCurrentTimeout() {
     if (spdfCurrentTimeout != null) {
         clearTimeout(spdfCurrentTimeout);
+    }
+    if (spdfAutoAlertTimeout != null) {
+        clearTimeout(spdfAutoAlertTimeout);
     }
     clearInterval(spdfCurrentInterval);
     var timeNode = document.getElementById("spdfTime");
@@ -255,6 +260,17 @@ def linkHandler(self, url, _old):
     elif action == "bury":
         mw.reviewer.onBuryCard()
 
+# suspend timers on specific events
+###############################################################################
+
+# would prefer to use Qt focusOutEvent, but that appears to be non-trivial
+def onDialogOpened(self, name, *args):
+    if mw.state in ("review", "resetRequired"):
+        mw.reviewer.bottom.web.eval("""
+            if (typeof(spdfClearCurrentTimeout) !== "undefined") {
+                spdfClearCurrentTimeout();
+            };
+        """)
 
 def initializeReviewer():
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
@@ -265,3 +281,5 @@ def initializeReviewer():
                                      setQuestionTimeouts)
     addHook("showAnswer", clearAnswerTimeouts)
     addHook("showQuestion", clearQuestionTimeouts)
+    aqt.DialogManager.open = wrap(aqt.DialogManager.open,
+                                  onDialogOpened, "after")
