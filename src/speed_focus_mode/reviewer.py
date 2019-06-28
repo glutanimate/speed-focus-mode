@@ -126,6 +126,8 @@ function spdfClearCurrentTimeout() {
     clearInterval(spdfCurrentInterval);
     var timeNode = document.getElementById("spdfTime");
     timeNode.textContent = "Stopped.";
+    $("#ansbut").focus();
+    $("#defease").focus();
 }
 
 function spdfSetAutoAlert(ms) {
