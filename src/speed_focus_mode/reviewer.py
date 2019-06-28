@@ -63,38 +63,115 @@ else:
 # html and timeouts
 ###############################################################################
 
-def appendHTML(self, _old):
-    return _old(self) + """
-        <script>
-            var autoAlertTimeout = 0;
-            var autoAnswerTimeout = 0;
-            var autoActionTimeout = 0;
+button_html = """
+<td id="spdfControls" width="50" align="center" valign="top" class="stat">
+<span id="spdfTime" class="stattxt"></span><br>
+<button title="Shortcut key: P"
+    onclick="spdfClearCurrentTimeout();">More time!</button>
+</td>
+"""
 
-            var setAutoAlert = function(ms) {
-                clearTimeout(autoAlertTimeout);
-                autoAlertTimeout = setTimeout(function () { %s("spdf:alert"); }, ms);
-            }
-            var setAutoAnswer = function(ms) {
-                clearTimeout(autoAnswerTimeout);
-                autoAnswerTimeout = setTimeout(function () { %s('ans') }, ms);
-            }
-            var setAutoAction = function(ms) {
-                clearTimeout(autoActionTimeout);
-                autoActionTimeout = setTimeout(function () { %s("spdf:action"); }, ms);
-            }
-        </script>
-        """ % (JSPY_BRIDGE, JSPY_BRIDGE, JSPY_BRIDGE)
+script = """
+var spdfAutoAlertTimeout = 0;
+var spdfAutoAnswerTimeout = 0;
+var spdfAutoActionTimeout = 0;
+var spdfCurrentTimeout = null;
+var spdfCurrentAction = null;
+var spdfCurrentInterval = null;
+
+function spdfReset() {
+    clearInterval(spdfCurrentInterval);
+    spdfCurrentTimeout = null;
+    spdfCurrentAction = null;
+}
+
+function spdfUpdateTime() {
+    var timeNode = document.getElementById("spdfTime");
+    if (spdfTimeLeft === 0) {
+        timeNode.textContent = "";
+        return;
+    }
+    var time = Math.max(spdfTimeLeft, 0);
+    var m = Math.floor(time / 60);
+    var s = time %% 60;
+    if (s < 10) {
+        s = "0" + s;
+    }
+    timeNode.textContent = spdfCurrentAction + " " + m + ":" + s;
+    spdfTimeLeft = time - 1;
+};
+
+function spdfSetCurrentTimer(timeout, action, ms) {
+    spdfCurrentAction = action;
+    spdfCurrentTimeout = timeout;
+    spdfTimeLeft = Math.round(ms / 1000);
+    spdfUpdateTime();
+    spdfCurrentInterval = setInterval(function () {
+        spdfUpdateTime();
+    }, 1000);
+}
+
+function spdfClearCurrentTimeout() {
+    if (spdfCurrentTimeout != null) {
+        clearTimeout(spdfCurrentTimeout);
+    }
+    clearInterval(spdfCurrentInterval);
+    var timeNode = document.getElementById("spdfTime");
+    timeNode.textContent = "Stopped.";
+}
+
+function spdfSetAutoAlert(ms) {
+    clearTimeout(spdfAutoAlertTimeout);
+    spdfAutoAlertTimeout = setTimeout(function () { %(bridge)s("spdf:alert"); }, ms);
+}
+
+function spdfSetAutoAnswer(ms) {
+    spdfReset();
+    clearTimeout(spdfAutoAnswerTimeout);
+    spdfAutoAnswerTimeout = setTimeout(function () { %(bridge)s('ans') }, ms);
+    spdfSetCurrentTimer(spdfAutoAnswerTimeout, "Reveal", ms)
+}
+function spdfSetAutoAction(ms, action) {
+    spdfReset();
+    clearTimeout(spdfAutoActionTimeout);
+    spdfAutoActionTimeout = setTimeout(function () { %(bridge)s("spdf:action"); }, ms);
+    spdfSetCurrentTimer(spdfAutoActionTimeout, action, ms)
+}
+
+function spdfHide() {
+    document.getElementById("spdfControls").style.display = "none";
+}
+function spdfShow() {
+    document.getElementById("spdfControls").style.display = "";
+}
+
+document.getElementById("middle").insertAdjacentHTML("afterend", '%(button)s')
+""" % (dict(bridge=JSPY_BRIDGE, button=button_html.replace("\n", "")))
+
+
+def appendHTML(self, _old):
+    return _old(self) + """<script>%s</script>""" % script
 
 
 # set timeouts for auto-alert and auto-reveal
 def setAnswerTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
+    active = False
     if c.get('autoAnswer', 0) > 0:
-        self.bottom.web.eval("setAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
+        self.bottom.web.eval("spdfSetAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
+        active = True
     if c.get('autoAlert', 0) > 0:
-        self.bottom.web.eval("setAutoAlert(%d);" % (c['autoAlert'] * 1000))
+        self.bottom.web.eval("spdfSetAutoAlert(%d);" % (c['autoAlert'] * 1000))
     if c.get("autoSkip") and c.get('autoAgain', 0) > 0:
-        self.bottom.web.eval("setAutoAction(%d);" % (c['autoAgain'] * 1000))
+        action = c.get('autoAction', "again").capitalize()
+        self.bottom.web.eval("spdfSetAutoAction(%d, '%s');" %
+                             (c['autoAgain'] * 1000, action))
+        active = True
+    
+    if active:
+        self.bottom.web.eval("spdfShow();")
+    else:
+        self.bottom.web.eval("spdfHide();")
 
 # set timeout for auto-action
 
@@ -103,7 +180,12 @@ def setQuestionTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
     if not c.get("autoSkip") and c.get('autoAgain', 0) > 0:
         # keep "autoAgain" as name for legacy reasons
-        self.bottom.web.eval("setAutoAction(%d);" % (c['autoAgain'] * 1000))
+        action = c.get('autoAction', "again").capitalize()
+        self.bottom.web.eval("spdfSetAutoAction(%d, '%s');" %
+                             (c['autoAgain'] * 1000, action))
+        self.bottom.web.eval("spdfShow();")
+    else:
+        self.bottom.web.eval("spdfHide();")
 
 
 # clear timeouts for auto-alert and auto-reveal, run on answer reveal
@@ -111,17 +193,17 @@ def clearAnswerTimeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
     reviewer.bottom.web.eval("""
-        if (typeof autoAnswerTimeout !== 'undefined') {
-            clearTimeout(autoAnswerTimeout);
+        if (typeof spdfAutoAnswerTimeout !== 'undefined') {
+            clearTimeout(spdfAutoAnswerTimeout);
         }
-        if (typeof autoAlertTimeout !== 'undefined') {
-            clearTimeout(autoAlertTimeout);
+        if (typeof spdfAutoAlertTimeout !== 'undefined') {
+            clearTimeout(spdfAutoAlertTimeout);
         }
     """)
     if c.get("autoSkip"):
         reviewer.bottom.web.eval("""
-            if (typeof autoActionTimeout !== 'undefined') {
-                clearTimeout(autoActionTimeout);
+            if (typeof spdfAutoActionTimeout !== 'undefined') {
+                clearTimeout(spdfAutoActionTimeout);
             }
         """)
 
@@ -133,8 +215,8 @@ def clearQuestionTimeouts():
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
     if not c.get("autoSkip"):
         mw.reviewer.bottom.web.eval("""
-            if (typeof autoActionTimeout !== 'undefined') {
-                clearTimeout(autoActionTimeout);
+            if (typeof spdfAutoActionTimeout !== 'undefined') {
+                clearTimeout(spdfAutoActionTimeout);
             }
         """)
 
