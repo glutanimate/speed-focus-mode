@@ -63,7 +63,7 @@ else:
 # html and timeouts
 ###############################################################################
 
-def append_html(self, _old):
+def appendHTML(self, _old):
     return _old(self) + """
         <script>
             var autoAlertTimeout = 0;
@@ -87,7 +87,7 @@ def append_html(self, _old):
 
 
 # set timeouts for auto-alert and auto-reveal
-def set_answer_timeouts(self):
+def setAnswerTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
     if c.get('autoAnswer', 0) > 0:
         self.bottom.web.eval("setAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
@@ -99,7 +99,7 @@ def set_answer_timeouts(self):
 # set timeout for auto-action
 
 
-def set_question_timeouts(self):
+def setQuestionTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
     if not c.get("autoSkip") and c.get('autoAgain', 0) > 0:
         # keep "autoAgain" as name for legacy reasons
@@ -107,7 +107,7 @@ def set_question_timeouts(self):
 
 
 # clear timeouts for auto-alert and auto-reveal, run on answer reveal
-def clear_answer_timeouts():
+def clearAnswerTimeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
     reviewer.bottom.web.eval("""
@@ -128,7 +128,7 @@ def clear_answer_timeouts():
 # clear timeout for auto-action, run on next card
 
 
-def clear_question_timeouts():
+def clearQuestionTimeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
     if not c.get("autoSkip"):
@@ -174,10 +174,10 @@ def linkHandler(self, url, _old):
 
 def initializeReviewer():
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
-    Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, append_html, 'around')
+    Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, appendHTML, 'around')
     Reviewer._showAnswerButton = wrap(
-        Reviewer._showAnswerButton, set_answer_timeouts)
+        Reviewer._showAnswerButton, setAnswerTimeouts)
     Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons,
-                                     set_question_timeouts)
-    addHook("showAnswer", clear_answer_timeouts)
-    addHook("showQuestion", clear_question_timeouts)
+                                     setQuestionTimeouts)
+    addHook("showAnswer", clearAnswerTimeouts)
+    addHook("showQuestion", clearQuestionTimeouts)

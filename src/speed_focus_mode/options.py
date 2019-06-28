@@ -48,7 +48,7 @@ action_spin_items = (
 )
 
 
-def setup_ui(self, Dialog):
+def setupUI(self, Dialog):
     self.maxTaken.setMinimum(3)
 
     grid = QGridLayout()
@@ -129,6 +129,6 @@ def save_conf(self):
 
 
 def initializeOptions():
-    dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setup_ui)
+    dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setupUI)
     DeckConf.loadConf = wrap(DeckConf.loadConf, load_conf)
     DeckConf.saveConf = wrap(DeckConf.saveConf, save_conf, 'before')
