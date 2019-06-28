@@ -12,6 +12,23 @@ If you enjoy Speed Focus Mode, please consider supporting my work on Patreon, or
 
 ## [Unreleased]
 
+### Added
+
+- A **button** that **stops automated events** from firing ("More Time!"). Can be disabled in the new config file.
+- A **hotkey** that that does the same (configurable, set to `p` by default,  thanks to AnKing for the inspiration)
+- A simple **countdown**, indicating the time until the next automated card action
+- Ability to **bury** cards (thanks to NicolasCuri for the inspiration)
+- Ability to **mark** cards as **"good"** (thanks to JulyMorning for the feature request)
+- Ability to launch card actions from the question side, skipping the answer reveal (e.g. to bury cards immediately)
+- Timers are now suspended automatically when opening dialogs
+- Support for Anki 2.1's `user_files` specification
+- Support for Anki 2.1's config system. Used for all general settings.
+
+### Changed
+
+- `sound.mp3` files should now be placed in the `user_files` directory to preserve them across add-on updates.
+- Some further code refactoring and reorganization to improve maintainability
+
 ## [0.3.0] - 2019-06-02
 
 ### [Download](https://github.com/glutanimate/speed-focus-mode/releases/tag/v0.3.0)
