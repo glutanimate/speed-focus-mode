@@ -30,19 +30,17 @@
 # Any modifications to this file must keep this entire header intact.
 
 """
-Initializes add-on components.
+Modifications to the Reviewer.
 """
+
 
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import os
 
-from aqt.qt import *
 from aqt import mw
 from aqt.reviewer import Reviewer
-from aqt.deckconf import DeckConf
-from aqt.forms import dconf
 from aqt.utils import tooltip
 
 from anki.hooks import addHook, wrap
@@ -61,99 +59,8 @@ if os.path.exists(user_alert):
 else:
     ALERT_PATH = default_alert
 
-# OPTIONS
-###############################################################################
 
-action_spin_items = (
-    ("Rate Again", "again"),
-    ("Rate Good", "good"),
-    ("Bury Card", "bury")
-)
-
-def setup_ui(self, Dialog):
-    self.maxTaken.setMinimum(3)
-
-    grid = QGridLayout()
-    label1 = QLabel(self.tab_5)
-    label1.setText("Automatically play alert after")
-    label2 = QLabel(self.tab_5)
-    label2.setText("seconds")
-    self.autoAlert = QSpinBox(self.tab_5)
-    self.autoAlert.setMinimum(0)
-    self.autoAlert.setMaximum(3600)
-    grid.addWidget(label1, 0, 0, 1, 1)
-    grid.addWidget(self.autoAlert, 0, 1, 1, 1)
-    grid.addWidget(label2, 0, 2, 1, 1)
-    self.verticalLayout_6.insertLayout(1, grid)
-
-    grid = QGridLayout()
-    label1 = QLabel(self.tab_5)
-    label1.setText("Automatically show answer after")
-    label2 = QLabel(self.tab_5)
-    label2.setText("seconds")
-    self.autoAnswer = QSpinBox(self.tab_5)
-    self.autoAnswer.setMinimum(0)
-    self.autoAnswer.setMaximum(3600)
-    grid.addWidget(label1, 0, 0, 1, 1)
-    grid.addWidget(self.autoAnswer, 0, 1, 1, 1)
-    grid.addWidget(label2, 0, 2, 1, 1)
-    self.verticalLayout_6.insertLayout(2, grid)
-
-    grid = QGridLayout()
-    label1 = QLabel(self.tab_5)
-    label1.setText("Automatically")
-    label2 = QLabel(self.tab_5)
-    label2.setText("after")
-    label3 = QLabel(self.tab_5)
-    label3.setText("seconds")
-    self.autoAction = QComboBox(self.tab_5)
-    for label, action in action_spin_items:
-        self.autoAction.addItem(label, action)
-    self.autoActionTimer = QSpinBox(self.tab_5)
-    self.autoActionTimer.setMinimum(0)
-    self.autoActionTimer.setMaximum(3600)
-    self.autoActionSkipAnswer = QCheckBox(self.tab_5)
-    self.autoActionSkipAnswer.setText("Skip answer")
-    self.autoActionSkipAnswer.setToolTip("Start counting on question side")
-    grid.addWidget(label1, 0, 0, 1, 1)
-    grid.addWidget(self.autoAction, 0, 1, 1, 1)
-    grid.addWidget(label2, 0, 2, 1, 1)
-    grid.addWidget(self.autoActionTimer, 0, 3, 1, 2)
-    grid.addWidget(label3, 0, 5, 1, 1)
-    grid.addWidget(self.autoActionSkipAnswer, 0, 6, 1, 1)
-    spacer = QSpacerItem(40, 10, QSizePolicy.Expanding)
-    grid.addItem(spacer, 0, 7, 1, 1)
-    self.verticalLayout_6.insertLayout(3, grid)
-
-def load_conf(self):
-    f = self.form
-    c = self.conf
-    f.autoAlert.setValue(c.get('autoAlert', 0))
-    f.autoAnswer.setValue(c.get('autoAnswer', 0))
-    # keep "autoAgain" as name for legacy reasons
-    f.autoActionTimer.setValue(c.get('autoAgain', 0))
-    cur_action = c.get('autoAction', "again")
-    for index, item in enumerate(action_spin_items):
-        if item[1] == cur_action:
-            f.autoAction.setCurrentIndex(index)
-    f.autoActionSkipAnswer.setChecked(c.get('autoSkip', False))
-
-
-def save_conf(self):
-    f = self.form
-    c = self.conf
-    c['autoAlert'] = f.autoAlert.value()
-    c['autoAnswer'] = f.autoAnswer.value()
-    c['autoAgain'] = f.autoActionTimer.value()
-    c['autoAction'] = f.autoAction.currentData()
-    c['autoSkip'] = f.autoActionSkipAnswer.isChecked()
-
-
-dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setup_ui)
-DeckConf.loadConf = wrap(DeckConf.loadConf, load_conf)
-DeckConf.saveConf = wrap(DeckConf.saveConf, save_conf, 'before')
-
-# REVIEWER - html and timeouts
+# html and timeouts
 ###############################################################################
 
 def append_html(self, _old):
@@ -190,6 +97,8 @@ def set_answer_timeouts(self):
         self.bottom.web.eval("setAutoAction(%d);" % (c['autoAgain'] * 1000))
 
 # set timeout for auto-action
+
+
 def set_question_timeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
     if not c.get("autoSkip") and c.get('autoAgain', 0) > 0:
@@ -217,6 +126,8 @@ def clear_answer_timeouts():
         """)
 
 # clear timeout for auto-action, run on next card
+
+
 def clear_question_timeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
@@ -228,18 +139,8 @@ def clear_question_timeouts():
         """)
 
 
-Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, append_html, 'around')
-Reviewer._showAnswerButton = wrap(
-    Reviewer._showAnswerButton, set_answer_timeouts)
-Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons,
-                                 set_question_timeouts)
-addHook("showAnswer", clear_answer_timeouts)
-addHook("showQuestion", clear_question_timeouts)
-
-
-# REVIEWER - action handler
+# action handler
 ###############################################################################
-
 
 def linkHandler(self, url, _old):
     if not url.startswith("spdf"):
@@ -249,7 +150,7 @@ def linkHandler(self, url, _old):
         return
     cmd, action = url.split(":")
     conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
-    
+
     if action == "alert":
         play(ALERT_PATH)
         timeout = conf.get('autoAlert', 0)
@@ -258,7 +159,7 @@ def linkHandler(self, url, _old):
                 period=1000)
     elif action == "action":
         action = conf.get('autoAction', "again")
-    
+
     if action == "again":
         if self.state == "question":
             self._showAnswer()
@@ -271,4 +172,12 @@ def linkHandler(self, url, _old):
         mw.reviewer.onBuryCard()
 
 
-Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
+def initializeReviewer():
+    Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
+    Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, append_html, 'around')
+    Reviewer._showAnswerButton = wrap(
+        Reviewer._showAnswerButton, set_answer_timeouts)
+    Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons,
+                                     set_question_timeouts)
+    addHook("showAnswer", clear_answer_timeouts)
+    addHook("showQuestion", clear_question_timeouts)

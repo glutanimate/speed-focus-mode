@@ -38,4 +38,8 @@ from __future__ import (absolute_import, division,
 
 from ._version import __version__  # noqa: F401
 
-from . import main  # noqa: F401
+from .options import initializeOptions
+from .reviewer import initializeReviewer
+
+initializeOptions()
+initializeReviewer()
