@@ -1,6 +1,12 @@
 All deck-wide settings supported by Speed Focus Mode follow below. Please note that you will have to restart Anki to apply any changes.
 
-- `showMoreTimeButton` (true/false): Whether to show the "More Time!" button and countdown in the Reviewer. Default: `true`.
+### `enableMoreTimeButton`
+
+(true/false): Whether to show the "More Time!" button and countdown in the Reviewer. Default: `true`.
+
+### `hotkeyMoreTime`
+
+(string): Hotkey used to trigger the "More Time!" feature. Needs to be a single alphanumerical key on Anki 2.0. Can be a composite hotkey on Anki 2.1 (e.g. "Ctrl+P"). Default: `p`.
 
 ---
 

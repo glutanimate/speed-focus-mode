@@ -1,3 +1,4 @@
 {
-    "showMoreTimeButton": true
+    "enableMoreTimeButton": true,
+    "hotkeyMoreTime": "p"
 }

@@ -41,6 +41,8 @@ import os
 
 import aqt
 
+from aqt.qt import QKeySequence
+
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.utils import tooltip
@@ -49,7 +51,7 @@ from anki.hooks import addHook, wrap
 from anki.sound import play
 
 from .config import local_conf
-from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE
+from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE, ANKI20
 
 # Support for custom alert sounds located in user_files dir
 
@@ -174,7 +176,7 @@ def setAnswerTimeouts(self):
                              (c['autoAgain'] * 1000, action))
         active = True
     
-    if active and local_conf["showMoreTimeButton"]:
+    if active and local_conf["enableMoreTimeButton"]:
         self.bottom.web.eval("spdfShow();")
     else:
         self.bottom.web.eval("spdfHide();")
@@ -189,7 +191,7 @@ def setQuestionTimeouts(self):
         action = c.get('autoAction', "again").capitalize()
         self.bottom.web.eval("spdfSetAutoAction(%d, '%s');" %
                              (c['autoAgain'] * 1000, action))
-        if local_conf["showMoreTimeButton"]:
+        if local_conf["enableMoreTimeButton"]:
             self.bottom.web.eval("spdfShow();")
     else:
         self.bottom.web.eval("spdfHide();")
@@ -260,17 +262,33 @@ def linkHandler(self, url, _old):
     elif action == "bury":
         mw.reviewer.onBuryCard()
 
-# suspend timers on specific events
+# Hotkeys
 ###############################################################################
 
-# would prefer to use Qt focusOutEvent, but that appears to be non-trivial
-def onDialogOpened(self, name, *args):
+def suspendTimers():
     if mw.state in ("review", "resetRequired"):
         mw.reviewer.bottom.web.eval("""
             if (typeof(spdfClearCurrentTimeout) !== "undefined") {
                 spdfClearCurrentTimeout();
             };
         """)
+
+def onReviewerStateShortcuts(shortcuts):
+    """Add hint hotkey on Anki 2.1.x"""
+    shortcuts.append((local_conf["hotkeyMoreTime"], suspendTimers))
+
+def reviewerKeyHandler20(self, evt, _old):
+    if evt.key() == QKeySequence(local_conf["hotkeyMoreTime"])[0]:
+        suspendTimers()
+        return
+    return _old(self, evt)
+
+# suspend timers on specific events
+###############################################################################
+
+# would prefer to use Qt focusOutEvent, but that appears to be non-trivial
+def onDialogOpened(self, name, *args):
+    suspendTimers()
 
 def initializeReviewer():
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
@@ -283,3 +301,9 @@ def initializeReviewer():
     addHook("showQuestion", clearQuestionTimeouts)
     aqt.DialogManager.open = wrap(aqt.DialogManager.open,
                                   onDialogOpened, "after")
+
+    if ANKI20:
+        Reviewer._keyHandler = wrap(
+            Reviewer._keyHandler, reviewerKeyHandler20, "around")
+    else:
+        addHook("reviewStateShortcuts", onReviewerStateShortcuts)
