@@ -12,6 +12,10 @@ If you enjoy Speed Focus Mode, please consider supporting my work on Patreon, or
 
 ## [Unreleased]
 
+## [0.4.0-beta.1] - 2019-06-28
+
+### [Download](https://github.com/glutanimate/speed-focus-mode/releases/tag/v0.4.0-beta.1)
+
 ### Added
 
 - A **button** that **stops automated events** from firing ("More Time!"). Can be disabled in the new config file.
@@ -73,7 +77,8 @@ If you enjoy Speed Focus Mode, please consider supporting my work on Patreon, or
 
 - Initial release of Speed Focus Mode
 
-[Unreleased]: https://github.com/glutanimate/speed-focus-mode/compare/v0.4.0-dev.1...HEAD
+[Unreleased]: https://github.com/glutanimate/speed-focus-mode/compare/v0.4.0-beta.1...HEAD
+[0.4.0-beta.1]: https://github.com/glutanimate/speed-focus-mode/compare/v0.4.0-dev.1...v0.4.0-beta.1
 [0.4.0-dev.1]: https://github.com/glutanimate/speed-focus-mode/compare/v0.3.0...v0.4.0-dev.1
 [0.3.0]: https://github.com/glutanimate/speed-focus-mode/releases/tag/v0.3.0
 
