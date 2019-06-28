@@ -124,7 +124,9 @@ def save_conf(self):
     c['autoAlert'] = f.autoAlert.value()
     c['autoAnswer'] = f.autoAnswer.value()
     c['autoAgain'] = f.autoActionTimer.value()
-    c['autoAction'] = f.autoAction.currentData()
+    # currentData is not supported on Qt4
+    idx = f.autoAction.currentIndex()
+    c['autoAction'] = action_spin_items[idx][1]
     c['autoSkip'] = f.autoActionSkipAnswer.isChecked()
 
 
