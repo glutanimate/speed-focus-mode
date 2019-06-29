@@ -65,7 +65,7 @@ else:
     ALERT_PATH = default_alert
 
 
-# html and timeouts
+# WEB
 ###############################################################################
 
 button_html = """
@@ -76,7 +76,7 @@ button_html = """
 </td>
 """ % local_conf["hotkeyMoreTime"]
 
-script = """
+script_bottom = """
 var spdfAutoAlertTimeout = 0;
 var spdfAutoAnswerTimeout = 0;
 var spdfAutoActionTimeout = 0;
@@ -158,12 +158,32 @@ function spdfShow() {
 document.getElementById("middle").insertAdjacentHTML("afterend", '%(button)s')
 """ % (dict(bridge=JSPY_BRIDGE, button=button_html.replace("\n", "")))
 
+# Suspend timer when typing answer
+script_reviewer = """
+function spdfOnKeyup() {
+    %(bridge)s("spdf:typeans");
+    // fire only once (legacy anki20 implementation):
+    typeans = document.getElementById("typeans");
+    typeans.removeEventListener("keyup", spdfOnKeyup);
+}
+setTimeout(function() {
+    typeans = document.getElementById("typeans");
+    if (typeans != null) {
+        typeans.addEventListener("keyup", spdfOnKeyup)
+    }
+}, 500)
+""" % (dict(bridge=JSPY_BRIDGE))
 
 def appendHTML(self, _old):
-    return _old(self) + """<script>%s</script>""" % script
+    return _old(self) + """<script>%s</script>""" % script_bottom
 
+def onShowQuestion():
+    if local_conf["stopWhenTypingAnswer"]:
+        mw.reviewer.web.eval(script_reviewer)
 
-# set timeouts for auto-alert and auto-reveal
+# TIMER HANDLING
+###############################################################################
+
 def setAnswerTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
     active = False
@@ -183,8 +203,6 @@ def setAnswerTimeouts(self):
     else:
         self.bottom.web.eval("spdfHide();")
 
-# set timeout for auto-action
-
 
 def setQuestionTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
@@ -199,7 +217,6 @@ def setQuestionTimeouts(self):
         self.bottom.web.eval("spdfHide();")
 
 
-# clear timeouts for auto-alert and auto-reveal, run on answer reveal
 def clearAnswerTimeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
@@ -218,9 +235,6 @@ def clearAnswerTimeouts():
             }
         """)
 
-# clear timeout for auto-action, run on next card
-
-
 def clearQuestionTimeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
@@ -232,7 +246,19 @@ def clearQuestionTimeouts():
         """)
 
 
-# action handler
+def suspendTimers():
+    if mw.state in ("review", "resetRequired"):
+        mw.reviewer.bottom.web.eval("""
+            if (typeof(spdfClearCurrentTimeout) !== "undefined") {
+                spdfClearCurrentTimeout();
+            };
+        """)
+
+def onDialogOpened(self, name, *args):
+    """Suspend timers when opening dialogs"""
+    suspendTimers()
+
+# PYTHON <-> JS COMMUNICATION
 ###############################################################################
 
 def linkHandler(self, url, _old):
@@ -244,7 +270,9 @@ def linkHandler(self, url, _old):
     cmd, action = url.split(":")
     conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
 
-    if action == "alert":
+    if action == "typeans":
+        suspendTimers()
+    elif action == "alert":
         play(ALERT_PATH)
         timeout = conf.get('autoAlert', 0)
         tooltip("Wake up! You have been looking at <br>"
@@ -264,16 +292,8 @@ def linkHandler(self, url, _old):
     elif action == "bury":
         mw.reviewer.onBuryCard()
 
-# Hotkeys
+# HOTKEYS
 ###############################################################################
-
-def suspendTimers():
-    if mw.state in ("review", "resetRequired"):
-        mw.reviewer.bottom.web.eval("""
-            if (typeof(spdfClearCurrentTimeout) !== "undefined") {
-                spdfClearCurrentTimeout();
-            };
-        """)
 
 def onReviewerStateShortcuts(shortcuts):
     """Add hint hotkey on Anki 2.1.x"""
@@ -285,22 +305,22 @@ def reviewerKeyHandler20(self, evt, _old):
         return
     return _old(self, evt)
 
-# suspend timers on specific events
-###############################################################################
 
-# would prefer to use Qt focusOutEvent, but that appears to be non-trivial
-def onDialogOpened(self, name, *args):
-    suspendTimers()
+# HOOKS
+###############################################################################
 
 def initializeReviewer():
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
     Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, appendHTML, 'around')
+    addHook("showQuestion", onShowQuestion)
+    
     Reviewer._showAnswerButton = wrap(
         Reviewer._showAnswerButton, setAnswerTimeouts)
     Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons,
                                      setQuestionTimeouts)
     addHook("showAnswer", clearAnswerTimeouts)
     addHook("showQuestion", clearQuestionTimeouts)
+   
     aqt.DialogManager.open = wrap(aqt.DialogManager.open,
                                   onDialogOpened, "after")
 
