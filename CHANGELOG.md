@@ -23,7 +23,7 @@ If you enjoy Speed Focus Mode, please consider supporting my work on Patreon, or
 - A simple **countdown**, indicating the time until the next automated card action
 - Ability to **bury** cards (thanks to NicolasCuri for the inspiration)
 - Ability to **mark** cards as **"good"** (thanks to JulyMorning for the feature request)
-- Ability to launch card actions from the question side, skipping the answer reveal (e.g. to bury cards immediately)
+- Ability to launch card actions from the question side, skipping the answer reveal (e.g. to bury cards immediately, thanks to Ba for the suggestion)
 - Timers are now suspended automatically when opening dialogs
 - Support for Anki 2.1's `user_files` specification
 - Support for Anki 2.1's config system. Used for all general settings.
