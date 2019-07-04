@@ -218,19 +218,24 @@ def linkHandler(self, url, _old):
 
 def setAnswerTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
-    active = False
-    if c.get('autoAnswer', 0) > 0:
-        self.bottom.web.eval("spdfSetAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
-        active = True
+    countdown_requested = False
     if c.get('autoAlert', 0) > 0:
-        self.bottom.web.eval("spdfSetAutoAlert(%d);" % (c['autoAlert'] * 1000))
+        self.bottom.web.eval(
+            "spdfSetAutoAlert(%d);" % (c['autoAlert'] * 1000))
+
     if c.get("autoSkip") and c.get('autoAgain', 0) > 0:
         action = c.get('autoAction', "again").capitalize()
         self.bottom.web.eval("spdfSetAutoAction(%d, '%s');" %
                              (c['autoAgain'] * 1000, action))
-        active = True
+        countdown_requested = True
+    elif c.get('autoAnswer', 0) > 0:
+        self.bottom.web.eval(
+            "spdfSetAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
+        countdown_requested = True
+    else:
+        return
     
-    if active and local_conf["enableMoreTimeButton"]:
+    if countdown_requested and local_conf["enableMoreTimeButton"]:
         self.bottom.web.eval("spdfShow();")
     else:
         self.bottom.web.eval("spdfHide();")
