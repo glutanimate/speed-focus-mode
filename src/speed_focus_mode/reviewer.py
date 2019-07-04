@@ -40,9 +40,7 @@ from __future__ import (absolute_import, division,
 import os
 
 import aqt
-
 from aqt.qt import QKeySequence
-
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.utils import tooltip
@@ -181,6 +179,40 @@ def onShowQuestion():
     if local_conf["stopWhenTypingAnswer"]:
         mw.reviewer.web.eval(script_reviewer)
 
+# PYTHON <-> JS COMMUNICATION
+###############################################################################
+
+def linkHandler(self, url, _old):
+    if not url.startswith("spdf"):
+        return _old(self, url)
+    if not mw.col:
+        # collection unloaded, e.g. when called during pre-exit sync
+        return
+    cmd, action = url.split(":")
+    conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
+
+    if action == "typeans":
+        suspendTimers()
+    elif action == "alert":
+        play(ALERT_PATH)
+        timeout = conf.get('autoAlert', 0)
+        tooltip("Wake up! You have been looking at <br>"
+                "the question for <b>{}</b> seconds!".format(timeout),
+                period=1000)
+    elif action == "action":
+        action = conf.get('autoAction', "again")
+
+    if action == "again":
+        if self.state == "question":
+            self._showAnswer()
+        self._answerCard(1)
+    elif action == "good":
+        if self.state == "question":
+            self._showAnswer()
+        self._answerCard(self._defaultEase())
+    elif action == "bury":
+        mw.reviewer.onBuryCard()
+
 # TIMER HANDLING
 ###############################################################################
 
@@ -257,40 +289,6 @@ def suspendTimers():
 def onDialogOpened(self, name, *args):
     """Suspend timers when opening dialogs"""
     suspendTimers()
-
-# PYTHON <-> JS COMMUNICATION
-###############################################################################
-
-def linkHandler(self, url, _old):
-    if not url.startswith("spdf"):
-        return _old(self, url)
-    if not mw.col:
-        # collection unloaded, e.g. when called during pre-exit sync
-        return
-    cmd, action = url.split(":")
-    conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
-
-    if action == "typeans":
-        suspendTimers()
-    elif action == "alert":
-        play(ALERT_PATH)
-        timeout = conf.get('autoAlert', 0)
-        tooltip("Wake up! You have been looking at <br>"
-                "the question for <b>{}</b> seconds!".format(timeout),
-                period=1000)
-    elif action == "action":
-        action = conf.get('autoAction', "again")
-
-    if action == "again":
-        if self.state == "question":
-            self._showAnswer()
-        self._answerCard(1)
-    elif action == "good":
-        if self.state == "question":
-            self._showAnswer()
-        self._answerCard(self._defaultEase())
-    elif action == "bury":
-        mw.reviewer.onBuryCard()
 
 # HOTKEYS
 ###############################################################################
