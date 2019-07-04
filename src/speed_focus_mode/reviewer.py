@@ -291,6 +291,10 @@ def suspendTimers():
             };
         """)
 
+def onMoreTime():
+    suspendTimers()
+    tooltip("Timer stopped.")
+
 def onDialogOpened(self, name, *args):
     """Suspend timers when opening dialogs"""
     suspendTimers()
@@ -300,11 +304,11 @@ def onDialogOpened(self, name, *args):
 
 def onReviewerStateShortcuts(shortcuts):
     """Add hint hotkey on Anki 2.1.x"""
-    shortcuts.append((local_conf["hotkeyMoreTime"], suspendTimers))
+    shortcuts.append((local_conf["hotkeyMoreTime"], onMoreTime))
 
 def reviewerKeyHandler20(self, evt, _old):
     if evt.key() == QKeySequence(local_conf["hotkeyMoreTime"])[0]:
-        suspendTimers()
+        onMoreTime()
         return
     return _old(self, evt)
 
