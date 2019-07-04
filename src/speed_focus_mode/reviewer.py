@@ -130,7 +130,8 @@ function spdfClearCurrentTimeout() {
 
 function spdfSetAutoAlert(ms) {
     clearTimeout(spdfAutoAlertTimeout);
-    spdfAutoAlertTimeout = setTimeout(function () { %(bridge)s("spdf:alert"); }, ms);
+    spdfAutoAlertTimeout = setTimeout(function () {
+        %(bridge)s("spdf:alert"); }, ms);
 }
 
 function spdfSetAutoAnswer(ms) {
@@ -142,7 +143,8 @@ function spdfSetAutoAnswer(ms) {
 function spdfSetAutoAction(ms, action) {
     spdfReset();
     clearTimeout(spdfAutoActionTimeout);
-    spdfAutoActionTimeout = setTimeout(function () { %(bridge)s("spdf:action"); }, ms);
+    spdfAutoActionTimeout = setTimeout(function () {
+        %(bridge)s("spdf:action"); }, ms);
     spdfSetCurrentTimer(spdfAutoActionTimeout, action, ms)
 }
 
