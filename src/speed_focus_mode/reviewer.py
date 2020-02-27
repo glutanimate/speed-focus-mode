@@ -40,13 +40,15 @@ from __future__ import (absolute_import, division,
 import os
 
 import aqt
+
 from aqt.qt import QKeySequence
+
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.utils import tooltip
 
 from anki.hooks import addHook, wrap
-from anki.sound import play
+from anki.sound import AVPlayer
 
 from .config import local_conf
 from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE, ANKI20
@@ -62,8 +64,9 @@ if os.path.exists(user_alert):
 else:
     ALERT_PATH = default_alert
 
+av_player = AVPlayer()
 
-# WEB
+# html and timeouts
 ###############################################################################
 
 button_html = """
@@ -74,7 +77,7 @@ button_html = """
 </td>
 """ % local_conf["hotkeyMoreTime"]
 
-script_bottom = """
+script = """
 var spdfAutoAlertTimeout = 0;
 var spdfAutoAnswerTimeout = 0;
 var spdfAutoActionTimeout = 0;
@@ -130,8 +133,7 @@ function spdfClearCurrentTimeout() {
 
 function spdfSetAutoAlert(ms) {
     clearTimeout(spdfAutoAlertTimeout);
-    spdfAutoAlertTimeout = setTimeout(function () {
-        %(bridge)s("spdf:alert"); }, ms);
+    spdfAutoAlertTimeout = setTimeout(function () { %(bridge)s("spdf:alert"); }, ms);
 }
 
 function spdfSetAutoAnswer(ms) {
@@ -143,8 +145,7 @@ function spdfSetAutoAnswer(ms) {
 function spdfSetAutoAction(ms, action) {
     spdfReset();
     clearTimeout(spdfAutoActionTimeout);
-    spdfAutoActionTimeout = setTimeout(function () {
-        %(bridge)s("spdf:action"); }, ms);
+    spdfAutoActionTimeout = setTimeout(function () { %(bridge)s("spdf:action"); }, ms);
     spdfSetCurrentTimer(spdfAutoActionTimeout, action, ms)
 }
 
@@ -158,89 +159,32 @@ function spdfShow() {
 document.getElementById("middle").insertAdjacentHTML("afterend", '%(button)s')
 """ % (dict(bridge=JSPY_BRIDGE, button=button_html.replace("\n", "")))
 
-# Suspend timer when typing answer
-script_reviewer = """
-function spdfOnKeyup() {
-    %(bridge)s("spdf:typeans");
-    // fire only once (legacy anki20 implementation):
-    typeans = document.getElementById("typeans");
-    typeans.removeEventListener("keyup", spdfOnKeyup);
-}
-setTimeout(function() {
-    typeans = document.getElementById("typeans");
-    if (typeans != null) {
-        typeans.addEventListener("keyup", spdfOnKeyup)
-    }
-}, 500)
-""" % (dict(bridge=JSPY_BRIDGE))
 
 def appendHTML(self, _old):
-    return _old(self) + """<script>%s</script>""" % script_bottom
+    return _old(self) + """<script>%s</script>""" % script
 
-def onShowQuestion():
-    if local_conf["stopWhenTypingAnswer"]:
-        mw.reviewer.web.eval(script_reviewer)
 
-# PYTHON <-> JS COMMUNICATION
-###############################################################################
-
-def linkHandler(self, url, _old):
-    if not url.startswith("spdf"):
-        return _old(self, url)
-    if not mw.col:
-        # collection unloaded, e.g. when called during pre-exit sync
-        return
-    cmd, action = url.split(":")
-    conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
-
-    if action == "typeans":
-        suspendTimers()
-    elif action == "alert":
-        play(ALERT_PATH)
-        timeout = conf.get('autoAlert', 0)
-        tooltip("Wake up! You have been looking at <br>"
-                "the question for <b>{}</b> seconds!".format(timeout),
-                period=1000)
-    elif action == "action":
-        action = conf.get('autoAction', "again")
-
-    if action == "again":
-        if self.state == "question":
-            self._showAnswer()
-        self._answerCard(1)
-    elif action == "good":
-        if self.state == "question":
-            self._showAnswer()
-        self._answerCard(self._defaultEase())
-    elif action == "bury":
-        mw.reviewer.onBuryCard()
-
-# TIMER HANDLING
-###############################################################################
-
+# set timeouts for auto-alert and auto-reveal
 def setAnswerTimeouts(self):
     c = mw.col.decks.confForDid(self.card.odid or self.card.did)
-    countdown_requested = False
+    active = False
+    if c.get('autoAnswer', 0) > 0:
+        self.bottom.web.eval("spdfSetAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
+        active = True
     if c.get('autoAlert', 0) > 0:
-        self.bottom.web.eval(
-            "spdfSetAutoAlert(%d);" % (c['autoAlert'] * 1000))
-
+        self.bottom.web.eval("spdfSetAutoAlert(%d);" % (c['autoAlert'] * 1000))
     if c.get("autoSkip") and c.get('autoAgain', 0) > 0:
         action = c.get('autoAction', "again").capitalize()
         self.bottom.web.eval("spdfSetAutoAction(%d, '%s');" %
                              (c['autoAgain'] * 1000, action))
-        countdown_requested = True
-    elif c.get('autoAnswer', 0) > 0:
-        self.bottom.web.eval(
-            "spdfSetAutoAnswer(%d);" % (c['autoAnswer'] * 1000))
-        countdown_requested = True
-    else:
-        return
-    
-    if countdown_requested and local_conf["enableMoreTimeButton"]:
+        active = True
+
+    if active and local_conf["enableMoreTimeButton"]:
         self.bottom.web.eval("spdfShow();")
     else:
         self.bottom.web.eval("spdfHide();")
+
+# set timeout for auto-action
 
 
 def setQuestionTimeouts(self):
@@ -256,6 +200,7 @@ def setQuestionTimeouts(self):
         self.bottom.web.eval("spdfHide();")
 
 
+# clear timeouts for auto-alert and auto-reveal, run on answer reveal
 def clearAnswerTimeouts():
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
@@ -274,7 +219,11 @@ def clearAnswerTimeouts():
             }
         """)
 
+# clear timeout for auto-action, run on next card
+
+
 def clearQuestionTimeouts():
+    av_player.stop_and_clear_queue()
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
     if not c.get("autoSkip"):
@@ -285,6 +234,42 @@ def clearQuestionTimeouts():
         """)
 
 
+# action handler
+###############################################################################
+
+def linkHandler(self, url, _old):
+    if not url.startswith("spdf"):
+        return _old(self, url)
+    if not mw.col:
+        # collection unloaded, e.g. when called during pre-exit sync
+        return
+    cmd, action = url.split(":")
+    conf = mw.col.decks.confForDid(self.card.odid or self.card.did)
+
+    if action == "alert":
+        av_player.play_file(ALERT_PATH)
+
+        timeout = conf.get('autoAlert', 0)
+        tooltip("Wake up! You have been looking at <br>"
+                "the question for <b>{}</b> seconds!".format(timeout),
+                period=1000)
+    elif action == "action":
+        action = conf.get('autoAction', "again")
+
+    if action == "again":
+        if self.state == "question":
+            self._showAnswer()
+        self._answerCard(1)
+    elif action == "good":
+        if self.state == "question":
+            self._showAnswer()
+        self._answerCard(self._defaultEase())
+    elif action == "bury":
+        mw.reviewer.onBuryCard()
+
+# Hotkeys
+###############################################################################
+
 def suspendTimers():
     if mw.state in ("review", "resetRequired"):
         mw.reviewer.bottom.web.eval("""
@@ -293,43 +278,32 @@ def suspendTimers():
             };
         """)
 
-def onMoreTime():
-    suspendTimers()
-    tooltip("Timer stopped.")
-
-def onDialogOpened(self, name, *args):
-    """Suspend timers when opening dialogs"""
-    suspendTimers()
-
-# HOTKEYS
-###############################################################################
-
 def onReviewerStateShortcuts(shortcuts):
     """Add hint hotkey on Anki 2.1.x"""
-    shortcuts.append((local_conf["hotkeyMoreTime"], onMoreTime))
+    shortcuts.append((local_conf["hotkeyMoreTime"], suspendTimers))
 
 def reviewerKeyHandler20(self, evt, _old):
     if evt.key() == QKeySequence(local_conf["hotkeyMoreTime"])[0]:
-        onMoreTime()
+        suspendTimers()
         return
     return _old(self, evt)
 
-
-# HOOKS
+# suspend timers on specific events
 ###############################################################################
+
+# would prefer to use Qt focusOutEvent, but that appears to be non-trivial
+def onDialogOpened(self, name, *args):
+    suspendTimers()
 
 def initializeReviewer():
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
     Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, appendHTML, 'around')
-    addHook("showQuestion", onShowQuestion)
-    
     Reviewer._showAnswerButton = wrap(
         Reviewer._showAnswerButton, setAnswerTimeouts)
     Reviewer._showEaseButtons = wrap(Reviewer._showEaseButtons,
                                      setQuestionTimeouts)
     addHook("showAnswer", clearAnswerTimeouts)
     addHook("showQuestion", clearQuestionTimeouts)
-   
     aqt.DialogManager.open = wrap(aqt.DialogManager.open,
                                   onDialogOpened, "after")
 
