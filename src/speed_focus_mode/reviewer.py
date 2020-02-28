@@ -46,6 +46,7 @@ from aqt.qt import QKeySequence
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.utils import tooltip
+from aqt import gui_hooks
 
 from anki.hooks import addHook, wrap
 from anki.sound import AVPlayer
@@ -224,6 +225,7 @@ def clearAnswerTimeouts():
 
 def clearQuestionTimeouts():
     av_player.stop_and_clear_queue()
+
     reviewer = mw.reviewer
     c = mw.col.decks.confForDid(reviewer.card.odid or reviewer.card.did)
     if not c.get("autoSkip"):
@@ -295,6 +297,9 @@ def reviewerKeyHandler20(self, evt, _old):
 def onDialogOpened(self, name, *args):
     suspendTimers()
 
+def stopSound(*args):
+    av_player.stop_and_clear_queue()
+
 def initializeReviewer():
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
     Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, appendHTML, 'around')
@@ -306,6 +311,9 @@ def initializeReviewer():
     addHook("showQuestion", clearQuestionTimeouts)
     aqt.DialogManager.open = wrap(aqt.DialogManager.open,
                                   onDialogOpened, "after")
+
+    # stops audio when you return to the decks list, etc
+    gui_hooks.state_did_change.append(stopSound)
 
     if ANKI20:
         Reviewer._keyHandler = wrap(
