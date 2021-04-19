@@ -2,7 +2,7 @@
 
 # Speed Focus Mode Add-on for Anki
 #
-# Copyright (C) 2017-2019  Aristotelis P. <https://glutanimate.com/>
+# Copyright (C) 2017-2021  Aristotelis P. <https://glutanimate.com/>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -297,7 +297,7 @@ def onMoreTime():
     suspendTimers()
     tooltip("Timer stopped.")
 
-def onDialogOpened(self, name, *args):
+def onDialogOpened(self, name, *args, **kwargs):
     """Suspend timers when opening dialogs"""
     suspendTimers()
 
@@ -319,6 +319,7 @@ def reviewerKeyHandler20(self, evt, _old):
 ###############################################################################
 
 def initializeReviewer():
+    # TODO: Remove dependencies on monkey-patches, update to use new hook system
     Reviewer._linkHandler = wrap(Reviewer._linkHandler, linkHandler, "around")
     Reviewer._bottomHTML = wrap(Reviewer._bottomHTML, appendHTML, 'around')
     addHook("showQuestion", onShowQuestion)
