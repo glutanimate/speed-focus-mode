@@ -40,9 +40,10 @@ from aqt.qt import QKeySequence
 from aqt import mw
 from aqt.reviewer import Reviewer
 from aqt.utils import tooltip
+from aqt.sound import av_player
 
 from anki.hooks import addHook, wrap
-from anki.sound import play
+
 
 from .config import local_conf
 from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE
@@ -192,7 +193,8 @@ def linkHandler(self, url, _old):
     if action == "typeans":
         suspendTimers()
     elif action == "alert":
-        play(ALERT_PATH)
+        av_player.clear_queue_and_maybe_interrupt()
+        av_player.play_file(ALERT_PATH)
         timeout = conf.get('autoAlert', 0)
         tooltip("Wake up! You have been looking at <br>"
                 "the question for <b>{}</b> seconds!".format(timeout),
