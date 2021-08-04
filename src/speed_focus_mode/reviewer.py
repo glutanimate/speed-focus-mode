@@ -33,10 +33,6 @@
 Modifications to the Reviewer.
 """
 
-
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 import os
 
 import aqt
@@ -49,7 +45,7 @@ from anki.hooks import addHook, wrap
 from anki.sound import play
 
 from .config import local_conf
-from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE, ANKI20
+from .consts import PATH_ADDON, PATH_USERFILES, JSPY_BRIDGE
 
 # Support for custom alert sounds located in user_files dir
 
@@ -334,8 +330,4 @@ def initializeReviewer():
     aqt.DialogManager.open = wrap(aqt.DialogManager.open,
                                   onDialogOpened, "after")
 
-    if ANKI20:
-        Reviewer._keyHandler = wrap(
-            Reviewer._keyHandler, reviewerKeyHandler20, "around")
-    else:
-        addHook("reviewStateShortcuts", onReviewerStateShortcuts)
+    addHook("reviewStateShortcuts", onReviewerStateShortcuts)
