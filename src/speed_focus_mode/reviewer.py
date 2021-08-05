@@ -273,7 +273,9 @@ def on_reviewer_did_show_question(*args, **kwargs):
     clear_question_timeouts(reviewer)
 
 
-def on_state_shortcuts_will_change(state: str, shortcuts: List[Tuple[str, Callable]]):
+def on_state_shortcuts_will_change(
+    state: str, shortcuts: List[Tuple[str, Callable]], *args, **kwargs
+):
     if state != "review":
         return
     shortcuts.append((local_conf["hotkeyMoreTime"], on_more_time))
