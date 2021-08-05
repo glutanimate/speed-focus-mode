@@ -33,10 +33,23 @@
 Module-level entry point for the add-on into Anki 2.0/2.1
 """
 
-from ._version import __version__  # noqa: F401
+from aqt import gui_hooks
 
+from ._version import __version__  # noqa: F401
 from .options import initialize_options
 from .reviewer import initialize_reviewer
 
-initialize_options()
-initialize_reviewer()
+_initialized: bool = False
+
+# Delay add-on initialization to work around conflicts with add-ons such as
+# Advanced Review Bottom Bar
+def initialize_addon():
+    global _initialized
+    if _initialized:
+        return
+    initialize_options()
+    initialize_reviewer()
+    _initialized = True
+
+
+gui_hooks.profile_did_open.append(initialize_addon)  # type: ignore[attr-defined]
