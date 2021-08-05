@@ -1,14 +1,9 @@
+/* 
 # -*- coding: utf-8 -*-
 
 # Speed Focus Mode Add-on for Anki
 #
-# Copyright (C) 2017-2019  Aristotelis P. <https://glutanimate.com/>
-#
-# Based on "Automatically show answer after X seconds"
-# (https://ankiweb.net/shared/info/648362761)
-#
-# The original author of this add-on is unknown, sadly,
-# but all credit for the original idea goes to them.
+# Copyright (C) 2017-2021  Aristotelis P. <https://glutanimate.com/>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -34,12 +29,18 @@
 # listed here: <https://glutanimate.com/contact/>.
 #
 # Any modifications to this file must keep this entire header intact.
+*/
 
-"""
-Entry point for the add-on into Anki 2.0
-
-In case you opened this file from Anki: Please do not modify anything
-if you are not sure what you are doing.
-"""
-
-import speed_focus_mode  # noqa: F401
+// Suspend timer when typing answer
+function spdfOnKeyup() {
+  pycmd("spdf:typeans");
+  // fire only once (legacy anki20 implementation):
+  typeans = document.getElementById("typeans");
+  typeans.removeEventListener("keyup", spdfOnKeyup);
+}
+setTimeout(function () {
+  typeans = document.getElementById("typeans");
+  if (typeans != null) {
+    typeans.addEventListener("keyup", spdfOnKeyup);
+  }
+}, 500);

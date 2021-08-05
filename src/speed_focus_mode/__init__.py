@@ -33,13 +33,10 @@
 Module-level entry point for the add-on into Anki 2.0/2.1
 """
 
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 from ._version import __version__  # noqa: F401
 
-from .options import initializeOptions
-from .reviewer import initializeReviewer
+from .options import initialize_options
+from .reviewer import initialize_reviewer
 
-initializeOptions()
-initializeReviewer()
+initialize_options()
+initialize_reviewer()
