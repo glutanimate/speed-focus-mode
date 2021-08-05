@@ -130,7 +130,7 @@ def save_conf(self):
     c['autoSkip'] = f.autoActionSkipAnswer.isChecked()
 
 
-def initializeOptions():
+def initialize_options():
     dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setupUI)
     DeckConf.loadConf = wrap(DeckConf.loadConf, load_conf)
     DeckConf.saveConf = wrap(DeckConf.saveConf, save_conf, 'before')
