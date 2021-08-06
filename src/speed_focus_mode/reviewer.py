@@ -183,7 +183,7 @@ reviewer_injector = f"""
 
 reviewer_bottom_injector = f"""
 <script>
-    window.spdfHotkeyMoreTime = {local_conf['hotkeyMoreTime']};
+    window.spdfHotkeyMoreTime = "{local_conf['hotkeyMoreTime']}";
 </script>
 <script src="/_addons/{MODULE_ADDON}/web/sfm-bottom-bar.js"></script>
 """
