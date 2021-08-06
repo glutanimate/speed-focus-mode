@@ -45,6 +45,8 @@ from aqt.utils import tooltip
 
 if TYPE_CHECKING:
     from aqt.webview import WebContent
+    from anki.decks import DeckManager
+    from anki.decks import DeckId, DeckConfigDict
 
     assert mw is not None
 
@@ -64,6 +66,21 @@ else:
 
 PYCMD_IDENTIFIER: str = "spdf"
 
+# ANKI API SHIMS
+###############################################################################
+
+
+def get_config_dict_for_deck_id(
+    deck_manager: "DeckManager", deck_id: Union["DeckId", int]
+) -> "DeckConfigDict":
+    try:
+        return deck_manager.config_dict_for_deck_id(
+            did=deck_id  # type: ignore[arg-type]
+        )
+    except AttributeError:
+        return deck_manager.confForDid(deck_id)  # type: ignore[attr-defined]
+
+
 # TIMER HANDLING
 ###############################################################################
 
@@ -73,7 +90,7 @@ def set_answer_timeouts(reviewer: Reviewer):
     if not card:
         return
 
-    c = reviewer.mw.col.decks.confForDid(card.odid or card.did)
+    c = get_config_dict_for_deck_id(reviewer.mw.col.decks, card.odid or card.did)
     countdown_requested = False
     if c.get("autoAlert", 0) > 0:
         reviewer.bottom.web.eval("spdfSetAutoAlert(%d);" % (c["autoAlert"] * 1000))
@@ -101,7 +118,7 @@ def set_question_timeouts(reviewer: Reviewer):
     if not card:
         return
 
-    c = reviewer.mw.col.decks.confForDid(card.odid or card.did)
+    c = get_config_dict_for_deck_id(reviewer.mw.col.decks, card.odid or card.did)
     if not c.get("autoSkip") and c.get("autoAgain", 0) > 0:
         # keep "autoAgain" as name for legacy reasons
         action = c.get("autoAction", "again").capitalize()
@@ -119,7 +136,7 @@ def clear_answer_timeouts(reviewer: Reviewer):
     if not card:
         return
 
-    c = reviewer.mw.col.decks.confForDid(card.odid or card.did)
+    c = get_config_dict_for_deck_id(reviewer.mw.col.decks, card.odid or card.did)
     reviewer.bottom.web.eval(
         """
         if (typeof spdfAutoAnswerTimeout !== 'undefined') {
@@ -145,7 +162,7 @@ def clear_question_timeouts(reviewer: Reviewer):
     if not card:
         return
 
-    c = reviewer.mw.col.decks.confForDid(card.odid or card.did)
+    c = get_config_dict_for_deck_id(reviewer.mw.col.decks, card.odid or card.did)
     if not c.get("autoSkip"):
         reviewer.bottom.web.eval(
             """
@@ -196,7 +213,9 @@ def webview_message_handler(reviewer: Reviewer, message: str):
 
     _, action = message.split(":", 1)
 
-    conf = reviewer.mw.col.decks.confForDid(card.odid or card.did)
+    deck_config = get_config_dict_for_deck_id(
+        reviewer.mw.col.decks, card.odid or card.did
+    )
 
     if action == "typeans":
         if local_conf["stopWhenTypingAnswer"]:
@@ -204,14 +223,14 @@ def webview_message_handler(reviewer: Reviewer, message: str):
     elif action == "alert":
         av_player.clear_queue_and_maybe_interrupt()
         av_player.play_file(ALERT_PATH)
-        timeout = conf.get("autoAlert", 0)
+        timeout = deck_config.get("autoAlert", 0)
         tooltip(
             "Wake up! You have been looking at <br>"
             "the question for <b>{}</b> seconds!".format(timeout),
             period=1000,
         )
     elif action == "action":
-        action = conf.get("autoAction", "again")
+        action = deck_config.get("autoAction", "again")
 
     if action == "again":
         if reviewer.state == "question":
