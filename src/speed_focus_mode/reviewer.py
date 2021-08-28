@@ -312,4 +312,6 @@ def initialize_reviewer():
     gui_hooks.reviewer_did_show_question.append(on_reviewer_did_show_question)
     gui_hooks.state_shortcuts_will_change.append(on_state_shortcuts_will_change)
     # TODO: file PR
-    aqt.DialogManager.open = wrap(aqt.DialogManager.open, on_dialog_opened, "after")
+    # Important: Need to wrap "before" as "after" overrides the patched method's
+    # return value, causing other add-ons depending on open() return to fail
+    aqt.DialogManager.open = wrap(aqt.DialogManager.open, on_dialog_opened, "before")
