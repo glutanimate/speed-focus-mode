@@ -300,7 +300,7 @@ def on_state_shortcuts_will_change(
     shortcuts.append((local_conf["hotkeyMoreTime"], on_more_time))
 
 
-def on_dialog_opened(self, *args, **kwargs):
+def on_dialog_manager_did_open_dialog(*args, **kwargs):
     """Suspend timers when opening dialogs"""
     suspend_timers(mw.reviewer)
 
@@ -311,7 +311,14 @@ def initialize_reviewer():
     gui_hooks.reviewer_did_show_answer.append(on_reviewer_did_show_answer)
     gui_hooks.reviewer_did_show_question.append(on_reviewer_did_show_question)
     gui_hooks.state_shortcuts_will_change.append(on_state_shortcuts_will_change)
-    # TODO: file PR
-    # Important: Need to wrap "before" as "after" overrides the patched method's
-    # return value, causing other add-ons depending on open() return to fail
-    aqt.DialogManager.open = wrap(aqt.DialogManager.open, on_dialog_opened, "before")
+
+    try:  # 2.1.47+
+        gui_hooks.dialog_manager_did_open_dialog.append(  # type: ignore
+            on_dialog_manager_did_open_dialog
+        )
+    except AttributeError:
+        # Important: Need to wrap "before" as "after" overrides the patched method's
+        # return value, causing other add-ons depending on open() return to fail
+        aqt.DialogManager.open = wrap(
+            aqt.DialogManager.open, on_dialog_manager_did_open_dialog, "before"
+        )
