@@ -6,7 +6,7 @@ All deck-wide settings supported by Speed Focus Mode follow below. Please note t
 
 ### `hotkeyMoreTime`
 
-(string): Hotkey used to trigger the "More Time!" feature. Needs to be a single alphanumerical key on Anki 2.0. Can be a composite hotkey on Anki 2.1 (e.g. "Ctrl+P"). Default: `p`.
+(text): Hotkey used to trigger the "More Time!" feature. Can be a composite hotkey (e.g. "Ctrl+P"). Default: `p`.
 
 ### `stopWhenTypingAnswer`
 
