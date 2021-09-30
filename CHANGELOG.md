@@ -12,6 +12,33 @@ If you enjoy Speed Focus Mode, please consider supporting my work on Patreon, or
 
 ## [Unreleased]
 
+The changelog below encompasses all changes since the previous AnkiWeb release.
+
+### Added
+
+- Added a **button** that **stops automated events** from firing ("More Time!"). Can be disabled in the new config file.
+- Added a **hotkey** that that does the same (configurable, set to `p` by default,  thanks to AnKing for the inspiration)
+- Added a simple **countdown**, indicating the time until the next automated card action
+- You can now **bury** cards (thanks to NicolasCuri for the inspiration)
+- You can now **mark** cards as **"good"** in addition to "again" (thanks to JulyMorning for the feature request)
+- Added ability to launch card actions from the question side, skipping the answer reveal (e.g. to bury cards immediately, thanks to Ba for the suggestion)
+- Timers are now suspended automatically when opening dialogs
+- Timers are now suspended automatically when typing answer
+
+### Changed
+
+- Please note that Anki versions 2.1.45 and above ship with a new deck options menu that is not ready to be used by add-ons just yet. To access the old deck options and thus Speed Focus Mode's settings, please shift click on the "Options" entry after clicking on the gear icon next to a deck.
+- `sound.mp3` files should now be placed in the `user_files` directory to preserve them across add-on updates.
+- Some further code refactoring and reorganization to improve maintainability and support with upcoming Anki updates
+
+### Fixed
+
+- Fixed an issue that would cause the add-on to produce an error message when opening the card browser in some scenarios (#38)
+- Fixed a compatibility issue with Clickable Tags, AnkiConnect, Review Heatmap, and other add-ons wrapping the dialog manager (#34, #28, #27, #23)
+- Dropped support for very old Anki versions. The minimum supported version is now 2.1.22.
+- Addressed an issue that would cause the alert not to play in some scenarios
+- Added a workaround to make Speed Focus Mode compatible with Advanced Review Bottom Bar
+
 ## [0.4.0-beta.1] - 2019-06-28
 
 ### [Download](https://github.com/glutanimate/speed-focus-mode/releases/tag/v0.4.0-beta.1)
