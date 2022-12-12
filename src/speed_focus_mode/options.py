@@ -33,18 +33,25 @@
 Modifications to deck options menu.
 """
 
-from anki.hooks import wrap
-from aqt.qt import *
+from pathlib import Path
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from aqt.deckoptions import DeckOptionsDialog
+
+from anki.hooks import wrap
 from aqt.deckconf import DeckConf
 from aqt.forms import dconf
+from aqt.gui_hooks import deck_options_did_load
+from aqt.qt import *
 
+# LEGACY
 ########################################################################
 
 action_spin_items = (
     ("Rate Again", "again"),
     ("Rate Good", "good"),
-    ("Bury Card", "bury")
+    ("Bury Card", "bury"),
 )
 
 
@@ -99,7 +106,7 @@ def setupUI(self, Dialog):
     grid.addWidget(self.autoActionTimer, 0, 3, 1, 2)
     grid.addWidget(label3, 0, 5, 1, 1)
     grid.addWidget(self.autoActionSkipAnswer, 0, 6, 1, 1)
-    spacer = QSpacerItem(40, 10, QSizePolicy.Expanding)
+    spacer = QSpacerItem(40, 10, QSizePolicy.Policy.Expanding)
     grid.addItem(spacer, 0, 7, 1, 1)
     self.verticalLayout_6.insertLayout(3, grid)
 
@@ -107,30 +114,46 @@ def setupUI(self, Dialog):
 def load_conf(self):
     f = self.form
     c = self.conf
-    f.autoAlert.setValue(c.get('autoAlert', 0))
-    f.autoAnswer.setValue(c.get('autoAnswer', 0))
+    f.autoAlert.setValue(c.get("autoAlert", 0))
+    f.autoAnswer.setValue(c.get("autoAnswer", 0))
     # keep "autoAgain" as name for legacy reasons
-    f.autoActionTimer.setValue(c.get('autoAgain', 0))
-    cur_action = c.get('autoAction', "again")
+    f.autoActionTimer.setValue(c.get("autoAgain", 0))
+    cur_action = c.get("autoAction", "again")
     for index, item in enumerate(action_spin_items):
         if item[1] == cur_action:
             f.autoAction.setCurrentIndex(index)
-    f.autoActionSkipAnswer.setChecked(c.get('autoSkip', False))
+    f.autoActionSkipAnswer.setChecked(c.get("autoSkip", False))
 
 
 def save_conf(self):
     f = self.form
     c = self.conf
-    c['autoAlert'] = f.autoAlert.value()
-    c['autoAnswer'] = f.autoAnswer.value()
-    c['autoAgain'] = f.autoActionTimer.value()
+    c["autoAlert"] = f.autoAlert.value()
+    c["autoAnswer"] = f.autoAnswer.value()
+    c["autoAgain"] = f.autoActionTimer.value()
     # currentData is not supported on Qt4
     idx = f.autoAction.currentIndex()
-    c['autoAction'] = action_spin_items[idx][1]
-    c['autoSkip'] = f.autoActionSkipAnswer.isChecked()
+    c["autoAction"] = action_spin_items[idx][1]
+    c["autoSkip"] = f.autoActionSkipAnswer.isChecked()
+
+
+# PLACEHOLDER SUPPORT FOR NEW SETTINGS
+########################################################################
+
+web_path = Path(__file__).parent / "web"
+
+with (web_path / "deck_options.js").open("r", encoding="utf-8") as f:
+    deck_options_js = f.read()
+
+
+def inject_deck_options(deck_options_dialog: "DeckOptionsDialog"):
+    if deck_options_dialog.web is None:
+        return
+    deck_options_dialog.web.eval(deck_options_js)
 
 
 def initialize_options():
     dconf.Ui_Dialog.setupUi = wrap(dconf.Ui_Dialog.setupUi, setupUI)
     DeckConf.loadConf = wrap(DeckConf.loadConf, load_conf)
-    DeckConf.saveConf = wrap(DeckConf.saveConf, save_conf, 'before')
+    DeckConf.saveConf = wrap(DeckConf.saveConf, save_conf, "before")
+    deck_options_did_load.append(inject_deck_options)
