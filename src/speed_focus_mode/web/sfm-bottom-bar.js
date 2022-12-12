@@ -118,9 +118,10 @@ function spdfShow() {
 
 const spdfButtonHTML = `
 <td id="spdfControls" width="50" align="center" valign="top" class="stat">
-<span id="spdfTime" class="stattxt"></span><br>
-<button title="Shortcut key: ${window.spdfHotkeyMoreTime}"
-    onclick="spdfClearCurrentTimeout();">More time!</button>
+<button title="Shortcut key: ${window.spdfHotkeyMoreTime}" onclick="spdfClearCurrentTimeout();">
+  More time!
+  <span id="spdfTime" class="stattxt"></span><br>
+</button>
 </td>
 `;
 
