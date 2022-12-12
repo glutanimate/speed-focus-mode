@@ -36,7 +36,7 @@ Addon-wide constants
 
 import os
 from aqt import mw
-from anki.utils import isMac, isWin
+from anki.utils import is_mac, is_win
 
 
 name_components = __name__.split(".")
@@ -51,9 +51,9 @@ JSPY_BRIDGE = "pycmd"
 PATH_ADDON = os.path.join(DIRECTORY_ADDONS, MODULE_ADDON)
 PATH_USERFILES = os.path.join(PATH_ADDON, "user_files")
 
-if isMac:
+if is_mac:
     PLATFORM = "mac"
-elif isWin:
+elif is_win:
     PLATFORM = "win"
 else:
     PLATFORM = "lin"
