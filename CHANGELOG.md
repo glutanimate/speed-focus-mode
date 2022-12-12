@@ -27,7 +27,8 @@ The changelog below encompasses all changes since the previous AnkiWeb release.
 
 ### Changed
 
-- Please note that Anki versions 2.1.45 and above ship with a new deck options menu that is not ready to be used by add-ons just yet. To access the old deck options and thus Speed Focus Mode's settings, please shift click on the "Options" entry after clicking on the gear icon next to a deck.
+- Raised minimum supported version to Anki 2.1.55 in order to conserve development time and prepare for upcoming refactor of Anki's main screen.
+- Please note that Anki versions 2.1.45 and above ship with a new deck options screen whose add-on APIs are still not fully set in stone and is thus not viable to support just yet. To access the old deck options and thus Speed Focus Mode's settings, please shift click on the "Options" entry after clicking on the gear icon next to a deck.
 - `sound.mp3` files should now be placed in the `user_files` directory to preserve them across add-on updates.
 - Some further code refactoring and reorganization to improve maintainability and support with upcoming Anki updates
 
