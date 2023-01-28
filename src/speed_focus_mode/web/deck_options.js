@@ -36,8 +36,7 @@ $deckOptions.then((options) => {
 <div>
   <br />
   <h2>Speed Focus Mode</h2>
-  <p
-    >Looking for <b>Speed Focus Mode</b>'s options? You can access them them via 
+  <p>Looking for <b>Speed Focus Mode</b>'s options? You can access them via 
     Anki's classic deck options screen. To get to the screen, simply close this
     window and go back to Anki's main screen. In the deck list, click on the gear icon
     next to a deck so that the deck menu pops up, 
