@@ -52,6 +52,7 @@ action_spin_items = (
     ("Rate Again", "again"),
     ("Rate Good", "good"),
     ("Bury Card", "bury"),
+    ("Rate Hard", "hard"),
 )
 
 
