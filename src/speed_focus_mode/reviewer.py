@@ -242,6 +242,10 @@ def webview_message_handler(reviewer: Reviewer, message: str):
         reviewer._answerCard(reviewer._defaultEase())
     elif action == "bury":
         reviewer.onBuryCard()
+    elif action == "hard":
+        if reviewer.state == "question":
+            reviewer._showAnswer()
+        reviewer._answerCard(2)
 
 
 def on_webview_did_receive_js_message(
